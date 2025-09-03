@@ -1,0 +1,129 @@
+import os
+import pytest
+from datetime import datetime
+import pytest_html
+from utils.driver_manager import DriverManager
+from pages.showcase_page import ShowcasePage
+from selenium.webdriver.remote.webdriver import WebDriver
+
+
+
+@pytest.fixture(scope="class")
+def driver():
+    driver = DriverManager.get_driver()
+    yield driver
+    driver.quit()
+
+
+@pytest.fixture(scope="class")
+def showcase_page(driver):
+    return ShowcasePage(driver)
+
+def pytest_sessionstart(session):
+    screenshot_dir = os.path.join(os.getcwd(), "screenshots")
+    if not os.path.exists(screenshot_dir):
+        os.makedirs(screenshot_dir)
+
+def ensure_directory(path):
+    """Ensure a directory exists, create if it doesn't"""
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+    return path
+
+def ensure_screenshot_dir():
+    """Ensure the screenshots directory exists and return its path."""
+    screenshot_dir = os.path.join(os.getcwd(), "screenshots")
+    if not os.path.exists(screenshot_dir):
+        os.makedirs(screenshot_dir, exist_ok=True)
+    return screenshot_dir
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_configure(config):
+    # Create reports directory if it doesn't exist
+    if not hasattr(config, 'workerinput'):  # Only for main process, not workers
+        report_dir = os.path.join(os.getcwd(), 'reports')
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir)
+        
+        # Set HTML report filename with timestamp
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        config.option.htmlpath = os.path.join(
+            report_dir, 
+            f'report_{timestamp}.html'
+        )
+
+
+def pytest_runtest_makereport(item, call):
+    pytest_html = item.config.pluginmanager.getplugin('html')
+    outcome = yield
+    report = outcome.get_result()
+    extra = getattr(report, 'extra', [])
+    
+    if report.when == 'call' or report.when == 'setup':
+        xfail = hasattr(report, 'wasxfail')
+        if (report.skipped and xfail) or (report.failed and not xfail):
+            # Add screenshot to HTML report
+            driver = item.funcargs['driver']
+            screenshot = driver.get_screenshot_as_base64()
+            extra.append(pytest_html.extras.image(screenshot, ''))
+            
+            # Add page source to HTML report
+            page_source = driver.page_source
+            extra.append(pytest_html.extras.text(page_source, 'Page Source'))
+        
+        report.extra = extra
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    
+    if report.when == "call" and report.failed:
+        # Get driver instance from test
+        driver = None
+        for fixture_name in item.fixturenames:
+            if "driver" in fixture_name:
+                driver = item.funcargs[fixture_name]
+                break
+        
+        if driver and isinstance(driver, WebDriver):
+            try:
+                # Ensure directory exists right before saving
+                screenshot_dir = ensure_screenshot_dir()
+                
+                # Create unique screenshot filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                test_name = item.nodeid.split("::")[-1]
+                safe_test_name = "".join(
+                    c if c.isalnum() else "_" for c in test_name
+                )
+                screenshot_path = os.path.join(
+                    screenshot_dir,
+                    f"FAILED_{safe_test_name}_{timestamp}.png"
+                )
+                
+                # Save screenshot
+                driver.save_screenshot(screenshot_path)
+                
+                # Add to HTML report
+                if hasattr(report, "extra"):
+                    # Embed small version in report
+                    screenshot_data = driver.get_screenshot_as_base64()
+                    report.extra.append(pytest_html.extras.image(screenshot_data))
+                    
+                    # Add link to full screenshot
+                    rel_path = os.path.relpath(screenshot_path, os.getcwd())
+                    report.extra.append(
+                        pytest_html.extras.html(
+                            f'<a href="{rel_path}" target="_blank">Full Screenshot</a>'
+                        )
+                    )
+                    
+            except Exception as e:
+                pytest.fail(f"Failed to capture screenshot: {str(e)}")
+
+# Create directory when pytest starts
+def pytest_sessionstart(session):
+    ensure_screenshot_dir()
