@@ -1,5 +1,5 @@
 import unittest
-from allure import link
+# from allure import link
 from selenium.webdriver.common.by import By
 from utils.driver_manager import DriverManager
 from pages.showcase_page import ShowcasePage
