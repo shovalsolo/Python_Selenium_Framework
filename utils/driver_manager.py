@@ -17,8 +17,8 @@ class DriverManager:
             options = webdriver.ChromeOptions()
             if Config.HEADLESS:
                 options.add_argument("--headless=new")
-            service = Service(executable_path='/Users/macsho/Programming/Python/Python_Selenium_Framework/showcase_framework/chromedriver')
-            driver = webdriver.Chrome(service=service, options=options)
+            # service = Service(executable_path='/Users/macsho/Programming/Python/Python_Selenium_Framework/showcase_framework/chromedriver')
+            driver = webdriver.Chrome(options=options)
             # service = ChromeService(executable_path="chromedriver")
             # driver = webdriver.Chrome(service=service, options=options)
             

@@ -5,19 +5,18 @@ import pytest_html
 from utils.driver_manager import DriverManager
 from pages.showcase_page import ShowcasePage
 from selenium.webdriver.remote.webdriver import WebDriver
-
-
+from selenium import webdriver
 
 @pytest.fixture(scope="class")
-def driver():
-    driver = DriverManager.get_driver()
-    yield driver
+def setup(request):
+    driver = webdriver.Chrome()
+    driver.get("https://www.google.com/")
+    driver.maximize_window()
+    request.cls.driver = driver
+    yield
     driver.quit()
 
 
-@pytest.fixture(scope="class")
-def showcase_page(driver):
-    return ShowcasePage(driver)
 
 def pytest_sessionstart(session):
     screenshot_dir = os.path.join(os.getcwd(), "screenshots")

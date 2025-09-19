@@ -1,4 +1,11 @@
 #### How to Run the Tests
+Location:
+/Users/macsho/Programming/Python_Selenium_Framework
+
+###
+If the browser was updated and the chromedriver is not supporting the browser version run the following command to update the chrome driver using the ChromeDriverManager
+pip install -r requirements.txt
+
 
 ### Get requirements
 1. pip install -r requirements.txt
