@@ -25,7 +25,7 @@ pytest tests/ --html=reports/report.html --self-contained-html --capture=no -v
 6. Run all with reports       test location Python_Selenium_Framework/showcase_framework
 pytest tests/ \                                          
   --html=reports/report.html \
-  --self-contained-html \
+  --self-contained-html \ 
   --capture=no \
   -v
 
